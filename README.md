@@ -1,3 +1,9 @@
+harborlight-banner-animated.svg
+
+<p align="center">
+  <img src="./harborlight-banner-animated.svg" width="100%" alt="HarborLight"/>
+</p>
+
 # Akira Ransomware Threat Hunt: Hunt 22 "Harborlight"
 
 ![Threat](https://img.shields.io/badge/threat-Akira%20ransomware-FF1493?style=flat-square&labelColor=0d1117)
