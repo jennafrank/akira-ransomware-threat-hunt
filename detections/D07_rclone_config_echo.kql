@@ -1,0 +1,17 @@
+// D7 — rclone config written via echo (cleartext credentials)
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1567.002 (Exfiltration to Cloud Storage), exfiltration preparation
+// Source:  Sysmon EventID 1 (Process Create)
+// Status:  Proposed. Replay TP in the hunt window; benign control pending.
+//
+// EventID 1 with echo plus rclone.conf or the listed configuration-field strings.
+// A config.dat filename alone is not selected by this body. Writing an
+// operator-supplied credential does not establish discovery of stored credentials.
+
+HarborlightDental_CL
+| where EventTime > ago(1d) and EventID == 1
+| where CommandLine has "echo" and (CommandLine has "rclone.conf" or CommandLine has_any ("type = mega","user =","pass ="))
+| project EventTime, host, CommandLine
+
+// FP/tuning: FP rate unmeasured; administrative scripts may match.

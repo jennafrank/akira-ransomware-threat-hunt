@@ -1,0 +1,34 @@
+// D3 — Non-service process injecting into spoolsv.exe or lsass.exe
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1055 (Process Injection), T1003.001 (LSASS Memory)
+// Source:  Sysmon EventID 8 (CreateRemoteThread), 10 (ProcessAccess)
+// Status:  Validated by replay against the hunt dataset (2026-10-14). The report
+//          Section 13 predates this replay and lists all rules as proposed.
+//          Production tuning pending.
+//
+// Keys on the Public/taskhostw implant OR high-value access masks against a
+// spoolsv/lsass target, and suppresses the benign SearchIndexer LSASS read (0x21410).
+
+HarborlightDental_CL
+| where EventTime > ago(1d) and EventID in (8, 10)
+| extend SrcImg = extract(@"SourceImage['""]>([^<]+)<", 1, EventData_Xml),
+         TgtImg = extract(@"TargetImage['""]>([^<]+)<", 1, EventData_Xml),
+         granted_access = tostring(column_ifexists("granted_access", ""))
+| where TgtImg has_any ("spoolsv.exe", "lsass.exe")
+| where not(SrcImg has "SearchIndexer.exe" and granted_access == "0x21410")
+| where SrcImg has_any (@"\Users\Public\", "taskhostw")
+     or granted_access in ("0x1fffff", "0x1410", "0x40")
+| project EventTime, host, SrcImg, TgtImg, granted_access
+
+// VALIDATION (BACKOFFICE-PC1, 2026-02-04 02:30:00–02:55:00): swap the ago(1d)
+// filter for the window above and add a Verdict column. Confirmed result:
+//   ALERT      02:47:11  taskhostw.exe -> spoolsv.exe   (incl. maskless EID 8, caught by source path)
+//   ALERT      02:49:46  spoolsv.exe   -> lsass.exe  0x1410 and 0x1fffff
+//   ALERT      02:50:17  spoolsv.exe   -> lsass.exe  0x1fffff  (LSASS dump)
+//   suppressed 02:35:47  SearchIndexer.exe -> lsass.exe 0x21410   (benign twin)
+//   suppressed 02:37:03  SearchIndexer.exe -> lsass.exe 0x21410   (benign twin)
+//
+// FP/tuning: EDR, backup and AV legitimately open LSASS. Baseline SYSTEM readers
+// and allowlist by signed publisher + mask before production. Never clear a
+// 0x1fffff open to lsass from a Public-path binary on mask alone.

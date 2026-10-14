@@ -1,0 +1,17 @@
+// D9 — Inhibit system recovery (VSS / backup / BCD tampering)
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1490 (Inhibit System Recovery)
+// Source:  Sysmon EventID 1 (Process Create)
+// Status:  Proposed. Replay TP in the hunt window; benign control pending.
+//
+// EventID 1 where CommandLine has any of vssadmin delete shadows, wbadmin ... delete
+// catalog, bcdedit ... recoveryenabled no, bootstatuspolicy ignoreallfailures, or
+// wmic shadowcopy delete.
+
+HarborlightDental_CL
+| where EventTime > ago(1d) and EventID == 1
+| where CommandLine has_any ("delete shadows","delete catalog","recoveryenabled no","bootstatuspolicy ignoreallfailures","shadowcopy delete")
+| project EventTime, host, Image, CommandLine
+
+// FP/tuning: FP rate unmeasured; approved backup maintenance can match.

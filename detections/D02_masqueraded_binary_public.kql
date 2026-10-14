@@ -1,0 +1,20 @@
+// D2 — Masqueraded binary executing from C:\Users\Public
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1036.005 (Masquerading: Match Legitimate Name or Location)
+// Source:  Sysmon EventID 1 (Process Create)
+// Status:  Proposed. Replay TP in the hunt window; benign control pending.
+//
+// EventID 1 where Image matches a known Windows process name (taskhostw, svchost,
+// spoolsv, RuntimeBroker, OneDriveSync, MsMpEng) but the path is not under
+// \Windows\System32\ or the legitimate install path.
+
+HarborlightDental_CL
+| where EventTime > ago(1d) and EventID == 1
+| extend leaf = tostring(split(Image, "\\")[-1])
+| where leaf in~ ("taskhostw.exe","spoolsv.exe","svchost.exe","runtimebroker.exe","onedrivesync.exe","msmpeng.exe")
+| where (Image startswith @"C:\Users\Public\" or Image startswith @"C:\ProgramData\Microsoft\") and Image !has "Windows Defender"
+| project EventTime, host, Image, ParentImage, CommandLine
+
+// FP/tuning: FP rate unmeasured; validate legitimate paths and deployment activity.
+// Maintain an allowlist of the real paths per binary.

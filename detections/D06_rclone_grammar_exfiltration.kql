@@ -1,0 +1,29 @@
+// D6 — Cloud exfiltration by rclone command grammar (any process name)
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1567.002 (Exfil to Cloud Storage), T1036.005 (Masquerading)
+// Source:  Sysmon EventID 1 (Process Create)
+// Status:  Validated by replay against the hunt dataset (2026-10-14). The report
+//          Section 13 predates this replay and lists all rules as proposed.
+//          Production tuning pending.
+//
+// Keys on rclone COMMAND GRAMMAR (a word:path remote + copy/sync + a config flag),
+// not the binary name, so renaming rclone to MsMpEng.exe does not evade it.
+
+HarborlightDental_CL
+| where EventTime > ago(1d) and EventID == 1
+| where CommandLine has_any ("mega:", "s3:", "b2:", "--config")
+    and CommandLine has_any ("copy", "sync")
+| where CommandLine matches regex @"\b\w+:[^\\]"
+| project EventTime, host, Image, CommandLine
+
+// VALIDATION (HL-FS01, 2026-02-04 03:55:00–04:05:00). Confirmed result — 3 hits,
+// rclone renamed MsMpEng.exe, invoked via cmd.exe, caught by grammar not name:
+//   03:57:40  ...MsMpEng.exe --config config.dat ... copy C:\Shares mega:HARBORLIGHT-exfil
+//   03:58:33  ...MsMpEng.exe --config rclone.conf  copy C:\Shares mega:HARBORLIGHT-exfil
+//   04:00:14  ...MsMpEng.exe --config rclone.conf  copy C:\Shares mega:HARBORLIGHT-exfil
+// The genuine Defender MsMpEng.exe and the config-write echo lines are NOT matched.
+//
+// FP/tuning: IT may use rclone for backups. Allowlist known rclone hashes, service
+// accounts and destination remotes; alert on any remote not on that allowlist.
+// Never allowlist by image name alone — that is the gap this rule exploits.

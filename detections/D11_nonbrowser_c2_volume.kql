@@ -1,0 +1,25 @@
+// D11 — Nonbrowser connection volume to candidate C2 endpoints
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1071.001 (Web Protocols), T1090 (Proxy); infrastructure/protocol interpretations
+// Source:  Sysmon EventID 3 (Network Connection)
+// Status:  Proposed (relaxed candidate generator). Replay TP in the hunt window; benign control pending.
+//
+// Selects high EventID 3 counts from nonbrowser processes grouped by destination IP.
+// It does not measure duration, payload content, external-only destinations or
+// per-process cadence. The earlier strict dual-port/low-variance form returned zero in
+// the author's replay; this relaxed volume query returned candidates.
+
+HarborlightDental_CL
+| where EventTime > ago(1d) and EventID == 3 and DestinationPort in ("80","443")
+| where Image !has "msedge" and Image !has "chrome" and Image !has "firefox" and Image !has "iexplore"
+| summarize conns = count(), ports = make_set(DestinationPort), FirstSeen = min(EventTime), LastSeen = max(EventTime)
+          by host, Image, DestinationIp, bin(EventTime, 1h)
+| where conns > 50
+// Candidate generator only. Review process lineage and domain evidence.
+// Q4 does not support a low-variance requirement for this incident.
+
+// FP/tuning: FP rate unmeasured; legitimate update and telemetry clients can match.
+// Use process lineage and domain evidence to assess candidates. Do not require a
+// sub-5-second standard deviation for this incident or describe shared CDN IPs as
+// malicious without context.

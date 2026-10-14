@@ -1,0 +1,29 @@
+// D10 — Rogue privileged account creation and group addition
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1136.002 (Create Account: Domain Account)
+// Source:  Security 4720 / 4728 / 4732; Sysmon EventID 1 (Process Create)
+// Status:  Validated by replay against the hunt dataset (2026-10-14). The report
+//          Section 13 predates this replay and lists all rules as proposed.
+//          Production tuning pending.
+//
+// Audit events (4720/4728/4732) confirm; the command line is the lead. A lookup
+// (net user <name> /domain with no /add) is NOT a creation and must not fire.
+
+HarborlightDental_CL
+| where EventTime > ago(1d)
+| where EventCode in (4720, 4728, 4732)
+     or (EventID == 1 and (
+            (CommandLine has_any ("net user", "net localgroup Administrators") and CommandLine has "/add")
+            or CommandLine has "Add-ADGroupMember"))
+| project EventTime, host, EventCode, EventID, CommandLine
+
+// VALIDATION (ADDC01, 2026-02-04 05:20:00–05:25:00). Confirmed result:
+//   05:21:56  net user svc_sql Summer2024! /add /domain   + Security 4720 (created)
+//   05:22:28  net localgroup Administrators svc_sql /add   + Security 4732
+//   05:22:54  Add-ADGroupMember 'Domain Admins' svc_sql  -> 05:22:57 Security 4728
+//   akira_svc decoy lookup (no /add, no 4720) correctly NOT matched.
+//
+// FP/tuning: legitimate provisioning also creates accounts. Allowlist approved
+// provisioning identities/hosts and MSP admin accounts; prioritize additions to
+// Domain Admins / Administrators over plain account creation.

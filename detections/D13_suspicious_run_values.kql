@@ -1,0 +1,26 @@
+// D13 — Run values pointing to suspicious staging paths
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1547.001 (Registry Run Keys / Startup Folder)
+// Source:  Sysmon EventID 13 (Registry Value Set)
+// Status:  Proposed, unvalidated. Underlying artifact confirmed; candidate replay pending.
+//
+// Select Sysmon 13 Run or RunOnce values whose data references Public or
+// ProgramData\Microsoft. R2 confirms the SecurityHealth artifact, but this new
+// candidate has not been replayed.
+
+HarborlightDental_CL
+| where EventTime > ago(1d)
+| where toint(EventID) == 13
+| extend RegistryPath=tolower(replace_regex(tostring(TargetObject), @"\\+", "/")),
+    ValueData=coalesce(tostring(column_ifexists("Details","")),
+        extract(@"<Data Name=['""']Details['""']>([^<]*)</Data>",1,EventData_Xml))
+| extend ValuePath=tolower(replace_regex(ValueData, @"\\+", "/"))
+| where RegistryPath contains "/currentversion/run/"
+    or RegistryPath contains "/currentversion/runonce/"
+| where ValuePath contains "/users/public/"
+    or ValuePath contains "/programdata/microsoft/"
+| project EventTime, host, Image, TargetObject, ValueData, User
+
+// FP/tuning: authorized software may match; validate signatures, deployment context
+// and representative benign controls.

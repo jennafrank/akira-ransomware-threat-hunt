@@ -1,0 +1,17 @@
+// D4 — LSASS dump written to disk
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1003.001 (OS Credential Dumping: LSASS Memory)
+// Source:  Sysmon EventID 11 (File Create)
+// Status:  Proposed. Replay TP in the hunt window; benign control pending.
+//
+// EventID 11 for a .dmp path containing lsass or written by a process whose Image
+// contains spoolsv. This is narrower than a general non-diagnostic dump rule.
+
+HarborlightDental_CL
+| where EventTime > ago(1d) and EventID == 11
+| where TargetFilename has ".dmp" and (TargetFilename has "lsass" or Image has "spoolsv")
+| project EventTime, host, User, Image, TargetFilename
+
+// FP/tuning: FP rate unmeasured; legitimate diagnostic dumps may match. WER paths
+// and werfault are not excluded by this body.

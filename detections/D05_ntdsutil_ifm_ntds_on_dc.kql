@@ -1,0 +1,18 @@
+// D5 — ntdsutil IFM / NTDS.dit extraction on a domain controller
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1003.003 (OS Credential Dumping: NTDS)
+// Source:  Sysmon EventID 1 (Process Create), 11 (File Create)
+// Status:  Proposed. Replay TP in the hunt window; benign control pending.
+//
+// EventID 1 where Image ends ntdsutil.exe and CommandLine has ifm or create full,
+// OR EventID 11 where TargetFilename has ntds.dit outside the normal DB path.
+
+HarborlightDental_CL
+| where EventTime > ago(1d)
+| where (EventID == 1 and Image has "ntdsutil.exe" and (CommandLine has "ifm" or CommandLine has "create full"))
+     or (EventID == 11 and TargetFilename has "ntds.dit" and TargetFilename !has @"\Windows\NTDS\")
+| project EventTime, host, EventID, User, Image, CommandLine, TargetFilename
+
+// FP/tuning: FP rate unmeasured; authorized IFM maintenance can match. Allowlist
+// scheduled DC maintenance windows if IFM is used for legitimate DC promotion.

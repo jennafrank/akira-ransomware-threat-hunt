@@ -1,0 +1,20 @@
+// D12 — rundll32 loading a DLL from a non-system drive letter via an export
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1218.011 (System Binary Proxy Execution: Rundll32), T1553.005 (Mark-of-the-Web Bypass)
+// Source:  Sysmon EventID 1 (Process Create)
+// Status:  Proposed. Replay TP in the hunt window; benign control pending.
+//
+// EventID 1 where Image ends rundll32.exe and CommandLine matches a non-system drive
+// path (D: through Z:) plus a .dll,Export form, or a for loop iterating drive letters
+// for a DLL. A D: to Z: path is not by itself proof of a mounted ISO or removable
+// media; it can be a fixed or mapped drive.
+
+HarborlightDental_CL
+| where EventTime > ago(1d) and EventID == 1 and Image has "rundll32"
+| where CommandLine matches regex @"[D-Z]:\\[^,]+\.dll,\w+" or (CommandLine has "for " and CommandLine has "rundll32")
+| project EventTime, host, CommandLine
+
+// FP/tuning: FP rate unmeasured; legitimate rundll32 use targets System32 DLLs, but
+// software installed on a secondary fixed drive can match. Confirming the drive type
+// needs mount or volume telemetry (a CdRom device path in EventID 11, or a mount event).

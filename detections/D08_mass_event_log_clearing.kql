@@ -1,0 +1,36 @@
+// D8 — Mass event-log clearing (wevtutil cl or 1102)
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1070.001 (Indicator Removal: Clear Windows Event Logs)
+// Source:  Sysmon EventID 1 (Process Create); Security 1102
+// Status:  Proposed, revised in report v1.11. Revised body awaiting replay and benign controls.
+//
+// Parse the channel argument from wevtutil cl or clear-log process commands, normalize
+// its case and count distinct channel names by host in fixed five-minute buckets.
+// Alert on three or more named channels, or on Security 1102. Commands indicate
+// attempted clearing; 1102 corroborates Security-log clearing.
+
+let B = HarborlightDental_CL
+    | where EventTime > ago(1d)
+    | extend EID=toint(EventID), EC=toint(EventCode),
+        ImageKey=tolower(replace_regex(tostring(Image), @"\\+", "/"));
+let R = @"(?i)(?:^|\s)(?:cl|clear-log)\s+(?:""([^""]+)""|([^\s""]+))";
+union
+(
+    B | where EID == 1 and ImageKey endswith "/wevtutil.exe"
+    | extend Channel=tolower(coalesce(extract(R, 1, CommandLine),
+                                      extract(R, 2, CommandLine)))
+    | where isnotempty(Channel)
+    | summarize Channels=dcount(Channel), ChannelList=make_set(Channel)
+        by host, bin(EventTime, 5m)
+    | where Channels >= 3
+    | extend Signal="wevtutil clear commands for 3+ channels/5min"
+),
+(
+    B | where EC == 1102
+    | project host, EventTime, Signal="Security log cleared (1102)"
+)
+
+// FP/tuning: FP rate unmeasured; approved maintenance can match. Fixed buckets can
+// split a burst across a boundary. The amended body requires replay; it is not yet
+// validated against this workspace.

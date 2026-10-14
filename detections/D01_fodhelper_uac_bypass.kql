@@ -1,0 +1,20 @@
+// D1 — fodhelper UAC bypass via ms-settings handler hijack
+// Author:  Jenna Frank (Hot Pink Huntress)
+// Hunt:    Hunt 22 "Harborlight" — Akira ransomware, Microsoft Sentinel
+// ATT&CK:  T1548.002 (Abuse Elevation Control Mechanism: Bypass UAC)
+// Source:  Sysmon EventID 13 (Registry Value Set), 1 (Process Create)
+// Status:  Proposed. Replay TP in the hunt window; benign control pending.
+//
+// EventID 13 RegistrySetValue where TargetObject ends \ms-settings\shell\open\command
+// or ...\DelegateExecute, OR EventID 1 where Image ends fodhelper.exe launched from a
+// scripting parent (cmd.exe/powershell.exe), as the observed bypass was (cmd /c fodhelper.exe).
+
+HarborlightDental_CL
+| where EventTime > ago(1d)
+| where (EventID == 13 and TargetObject has @"\ms-settings\shell\open\command")
+     or (EventID == 13 and TargetObject has @"\ms-settings\shell\open\command\DelegateExecute")
+     or (EventID == 1 and Image endswith @"\fodhelper.exe" and ParentImage has_any ("cmd.exe","powershell.exe"))
+| project EventTime, host, EventID, Image, ParentImage, TargetObject
+
+// FP/tuning: FP rate unmeasured; authorized installers may write this key.
+// Exclude known installers if any appear in baseline.
