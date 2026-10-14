@@ -5,10 +5,10 @@
 
 # Akira Ransomware Threat Hunt: Hunt 22 "Harborlight"
 
-![Threat](https://img.shields.io/badge/threat-Akira%20ransomware-2EA043?style=flat-square&labelColor=0d1117)
-![Platform](https://img.shields.io/badge/platform-Microsoft%20Sentinel-2EA043?style=flat-square&labelColor=0d1117)
-![Language](https://img.shields.io/badge/query-KQL-2EA043?style=flat-square&labelColor=0d1117)
-![Detections](https://img.shields.io/badge/detections-13%20authored-2EA043?style=flat-square&labelColor=0d1117)
+![Threat](https://img.shields.io/badge/threat-Akira%20ransomware-1A6E2E?style=flat-square&labelColor=0d1117)
+![Platform](https://img.shields.io/badge/platform-Microsoft%20Sentinel-1A6E2E?style=flat-square&labelColor=0d1117)
+![Language](https://img.shields.io/badge/query-KQL-1A6E2E?style=flat-square&labelColor=0d1117)
+![Detections](https://img.shields.io/badge/detections-13%20authored-1A6E2E?style=flat-square&labelColor=0d1117)
 
 **A small dental and insurance office got hit by ransomware overnight. I worked out exactly how, from the raw logs alone.**
 
