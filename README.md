@@ -1,4 +1,3 @@
-harborlight-banner-animated.svg
 
 <p align="center">
   <img src="./harborlight-banner-animated.svg" width="100%" alt="HarborLight"/>
